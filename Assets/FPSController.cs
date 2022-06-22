@@ -5,12 +5,18 @@ using UnityEngine;
 public class FPSController : MonoBehaviour
 {
     CharacterController characterController;
+    public bool useFootsteps = true;
+    public bool isWalking = true;
+    public bool isRunning = true;
     [Header("Opciones de personaje")]
     public float walkSpeed = 6.0f;
     public float runSpeed = 10.0f;
     public float jumpSpeed = 8.0f;
     public float gravity = 20.0f;
-
+    public AudioSource footstepAudioSource = default;
+    public AudioClip[] woodClips = default;
+    public AudioClip[] grassClips = default;
+    public float footstepTimer = 1.0f;
     [Header("Opciones de camara")]
     public Camera cam;
     public float mouseHorizontal = 3.0f;
@@ -50,9 +56,17 @@ public class FPSController : MonoBehaviour
             move = new Vector3(Input.GetAxis("Horizontal"), 0.0f, Input.GetAxis("Vertical"));
 
             if (Input.GetKey(KeyCode.LeftShift))
+            {
                 move = transform.TransformDirection(move) * runSpeed;
+                isWalking = false;
+                isRunning = true;
+            }
             else
+            {
                 move = transform.TransformDirection(move) * walkSpeed;
+                isWalking = true;
+                isRunning = false;
+            }
 
             if (Input.GetKey(KeyCode.Space))
 
@@ -61,5 +75,35 @@ public class FPSController : MonoBehaviour
         move.y -= gravity * Time.deltaTime;
 
         characterController.Move(move * Time.deltaTime);
+
+        if (useFootsteps) Handle_Footsteps();
+    }
+    private void Handle_Footsteps()
+    {
+        if (!characterController.isGrounded) return;
+        if (Input.GetAxis("Horizontal") ==0 && Input.GetAxis("Vertical") == 0) return;  //como hago?
+
+        footstepTimer -= Time.deltaTime;
+
+        if (footstepTimer <= 0)
+        {
+            if(Physics.Raycast(cam.transform.position, Vector3.down, out RaycastHit hit, 3))
+            {
+                switch(hit.collider.tag)
+                {
+                    case "Footsteps/Wood":
+                        footstepAudioSource.PlayOneShot(woodClips[Random.Range(0, woodClips.Length - 1)]);
+                        break;
+                    case "Footsteps/Grass":
+                        footstepAudioSource.PlayOneShot(grassClips[Random.Range(0, grassClips.Length - 1)]);
+                        break;
+                    default:
+                        footstepAudioSource.PlayOneShot(woodClips[Random.Range(0, woodClips.Length - 1)]);
+                        break;
+                }
+            }
+            if (isWalking) footstepTimer = 0.6f; 
+            else footstepTimer = 0.35f;
+        }
     }
 }
